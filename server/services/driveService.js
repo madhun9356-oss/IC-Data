@@ -4,6 +4,71 @@ import path from 'path';
 
 const CREDENTIALS_PATH = path.resolve(process.cwd(), 'server/config/google_credentials.json');
 
+// Helper to resolve Google Authentication from environment variables or local key file
+function getGoogleAuth(scopes) {
+  // 1. Check environment variables containing full JSON (raw JSON or base64 encoded)
+  const envJsonStr = process.env.GOOGLE_CREDENTIALS_JSON || 
+                     process.env.GOOGLE_SERVICE_ACCOUNT_JSON || 
+                     process.env.GOOGLE_CREDENTIALS ||
+                     (process.env.GOOGLE_APPLICATION_CREDENTIALS && process.env.GOOGLE_APPLICATION_CREDENTIALS.trim().startsWith('{') ? process.env.GOOGLE_APPLICATION_CREDENTIALS : null);
+
+  if (envJsonStr) {
+    try {
+      let jsonContent = envJsonStr.trim();
+      // Handle base64 encoded JSON if applicable
+      if (!jsonContent.startsWith('{')) {
+        jsonContent = Buffer.from(jsonContent, 'base64').toString('utf8');
+      }
+      const credentials = JSON.parse(jsonContent);
+      if (credentials.private_key && typeof credentials.private_key === 'string') {
+        credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+      }
+      return new google.auth.GoogleAuth({
+        credentials,
+        scopes
+      });
+    } catch (e) {
+      console.error('[DriveService] Error parsing Google credentials from env JSON:', e.message);
+    }
+  }
+
+  // 2. Check individual environment variables (GOOGLE_CLIENT_EMAIL & GOOGLE_PRIVATE_KEY)
+  if (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+    try {
+      const privateKey = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
+      const credentials = {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: privateKey,
+        project_id: process.env.GOOGLE_PROJECT_ID || 'ic-income-data'
+      };
+      return new google.auth.GoogleAuth({
+        credentials,
+        scopes
+      });
+    } catch (e) {
+      console.error('[DriveService] Error setting up Google auth from individual env vars:', e.message);
+    }
+  }
+
+  // 3. Check GOOGLE_APPLICATION_CREDENTIALS file path if specified and exists
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+    return new google.auth.GoogleAuth({
+      keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      scopes
+    });
+  }
+
+  // 4. Fallback to local default file path
+  if (fs.existsSync(CREDENTIALS_PATH)) {
+    return new google.auth.GoogleAuth({
+      keyFile: CREDENTIALS_PATH,
+      scopes
+    });
+  }
+
+  return null;
+}
+
 let driveClient = null;
 
 // Initialize Google Drive API with Service Account credentials
@@ -11,13 +76,15 @@ export function getDriveClient() {
   if (driveClient) return driveClient;
 
   try {
-    if (fs.existsSync(CREDENTIALS_PATH)) {
-      const auth = new google.auth.GoogleAuth({
-        keyFile: CREDENTIALS_PATH,
-        scopes: ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/spreadsheets']
-      });
+    const auth = getGoogleAuth([
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/spreadsheets'
+    ]);
+    if (auth) {
       driveClient = google.drive({ version: 'v3', auth });
-      console.log('[DriveService] Initialized Google Drive API with Service Account: ic-data@ic-income-data.iam.gserviceaccount.com');
+      console.log('[DriveService] Initialized Google Drive API with Service Account');
+    } else {
+      console.warn('[DriveService] No Google Service Account credentials found (env vars or key file)');
     }
   } catch (err) {
     console.error('[DriveService] Google Drive Auth setup notice:', err.message);
@@ -31,13 +98,15 @@ export function getSheetsClient() {
   if (sheetsClient) return sheetsClient;
 
   try {
-    if (fs.existsSync(CREDENTIALS_PATH)) {
-      const auth = new google.auth.GoogleAuth({
-        keyFile: CREDENTIALS_PATH,
-        scopes: ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/spreadsheets.readonly']
-      });
+    const auth = getGoogleAuth([
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/spreadsheets.readonly'
+    ]);
+    if (auth) {
       sheetsClient = google.sheets({ version: 'v4', auth });
       console.log('[DriveService] Initialized Google Sheets API with Service Account');
+    } else {
+      console.warn('[DriveService] No Google Service Account credentials found (env vars or key file)');
     }
   } catch (err) {
     console.error('[DriveService] Google Sheets Auth setup notice:', err.message);
@@ -69,7 +138,7 @@ export async function downloadDriveFile(driveUrlOrId) {
 
   const drive = getDriveClient();
   if (!drive) {
-    return { error: 'Service Account credentials not configured' };
+    return { error: 'Service Account credentials not configured for Google Drive. Please set GOOGLE_CREDENTIALS_JSON or GOOGLE_CLIENT_EMAIL & GOOGLE_PRIVATE_KEY environment variables in Vercel/Render, or add server/config/google_credentials.json.' };
   }
 
   try {
@@ -175,7 +244,7 @@ export async function fetchSpreadsheetData(spreadsheetUrl) {
 
   const sheets = getSheetsClient();
   if (!sheets) {
-    throw new Error('Service Account credentials not configured for Google Sheets');
+    throw new Error('Service Account credentials not configured for Google Sheets. Please set GOOGLE_CREDENTIALS_JSON or GOOGLE_CLIENT_EMAIL & GOOGLE_PRIVATE_KEY environment variables in Vercel/Render, or add server/config/google_credentials.json.');
   }
 
   try {

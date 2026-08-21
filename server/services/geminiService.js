@@ -129,7 +129,7 @@ export async function extractICData(imageBuffer, mimeType = 'image/jpeg', mockSa
 
     // Direct Google Gemini API Key with automatic model fallback
     const genAI = new GoogleGenerativeAI(apiKey);
-    const candidateModels = ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'];
+    const candidateModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-1.5-pro'];
 
     const imagePart = {
       inlineData: {

@@ -301,6 +301,10 @@ app.post('/api/export', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 IC Verification System Server running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 IC Verification System Server running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
