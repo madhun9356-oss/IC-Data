@@ -15,6 +15,11 @@ function getGoogleAuth(scopes) {
   if (envJsonStr) {
     try {
       let jsonContent = envJsonStr.trim();
+      // Strip outer quotes if pasted with enclosing single or double quotes
+      if ((jsonContent.startsWith("'") && jsonContent.endsWith("'")) ||
+          (jsonContent.startsWith('"') && jsonContent.endsWith('"'))) {
+        jsonContent = jsonContent.slice(1, -1).trim();
+      }
       // Handle base64 encoded JSON if applicable
       if (!jsonContent.startsWith('{')) {
         jsonContent = Buffer.from(jsonContent, 'base64').toString('utf8');
