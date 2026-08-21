@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #f8f9fa;
+    color: #1e293b;
+  }
+}
+
+.glass-panel {
+  background: #ffffff;
+  border: 1px solid rgba(74, 11, 89, 0.1);
+  box-shadow: 0 4px 20px 0 rgba(74, 11, 89, 0.05);
+}
+
+.glass-panel-interactive {
+  background: #ffffff;
+  border: 1px solid rgba(74, 11, 89, 0.1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel-interactive:hover {
+  background: #ffffff;
+  border-color: rgba(74, 11, 89, 0.3);
+  box-shadow: 0 8px 30px -5px rgba(74, 11, 89, 0.15);
+  transform: translateY(-2px);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #4a0b59 0%, #6d1b7b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glow-purple {
+  box-shadow: 0 0 25px -5px rgba(74, 11, 89, 0.4);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 25px -5px rgba(255, 193, 7, 0.4);
+}
+
+.tns-purple {
+  color: #4a0b59;
+}
+.tns-bg-purple {
+  background-color: #4a0b59;
+}
+.tns-yellow {
+  color: #ffc107;
+}
+.tns-bg-yellow {
+  background-color: #ffc107;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

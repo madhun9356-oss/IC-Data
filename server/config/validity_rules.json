@@ -1,0 +1,32 @@
+{
+  "states": {
+    "Telangana": {
+      "validityYears": 1,
+      "code": "TS",
+      "authority": "Tahsildar / Meeseva",
+      "supportedPhase": 1
+    },
+    "Andhra Pradesh": {
+      "validityYears": 4,
+      "code": "AP",
+      "authority": "Tahsildar / MeeSeva",
+      "supportedPhase": 1
+    },
+    "Tamil Nadu": {
+      "validityYears": 1,
+      "code": "TN",
+      "authority": "e-Sevai / Revenue Dept",
+      "supportedPhase": 2
+    },
+    "Karnataka": {
+      "validityYears": 5,
+      "code": "KA",
+      "authority": "Nadakacheri / Revenue Dept",
+      "supportedPhase": 2
+    }
+  },
+  "defaultIncomeTolerancePercent": 5,
+  "defaultMinNameScore": 0.85,
+  "partialNameScoreMin": 0.60,
+  "minConfidenceThreshold": 0.75
+}

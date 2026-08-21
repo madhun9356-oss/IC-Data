@@ -1,0 +1,23 @@
+# Environment Variables (Keep API keys secret!)
+.env
+.env.local
+.env.*.local
+
+# Sensitive Credentials & Service Account Keys
+server/config/google_credentials.json
+*_credentials.json
+*.pem
+
+# Node modules & dependencies
+node_modules/
+
+# Production build outputs
+dist/
+dist-ssr/
+*.local
+
+# IDE & OS temporary files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
