@@ -103,7 +103,10 @@ function getGoogleAuth(scopes) {
     });
   }
 
-  lastAuthError = 'GOOGLE_CREDENTIALS_JSON variable not found in Vercel environment';
+  const foundKeys = Object.keys(process.env).filter(k => 
+    k.includes('GOOGLE') || k.includes('GEMINI') || k.includes('API') || k.includes('KEY') || k.includes('CRED')
+  );
+  lastAuthError = `GOOGLE_CREDENTIALS_JSON missing in Vercel process.env. Relevant keys found: [${foundKeys.join(', ') || 'none'}]`;
   return null;
 }
 
