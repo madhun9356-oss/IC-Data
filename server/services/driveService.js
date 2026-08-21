@@ -103,6 +103,7 @@ function getGoogleAuth(scopes) {
     });
   }
 
+  lastAuthError = 'GOOGLE_CREDENTIALS_JSON variable not found in Vercel environment';
   return null;
 }
 
