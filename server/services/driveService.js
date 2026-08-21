@@ -5,7 +5,16 @@ import path from 'path';
 const CREDENTIALS_PATH = path.resolve(process.cwd(), 'server/config/google_credentials.json');
 
 // Helper to resolve Google Authentication from environment variables or local key file
+let lastAuthError = null;
+
+export function getLastAuthError() {
+  return lastAuthError;
+}
+
+// Helper to resolve Google Authentication from environment variables or local key file
 function getGoogleAuth(scopes) {
+  lastAuthError = null;
+
   // 1. Check environment variables containing full JSON (raw JSON or base64 encoded)
   const envJsonStr = process.env.GOOGLE_CREDENTIALS_JSON || 
                      process.env.GOOGLE_SERVICE_ACCOUNT_JSON || 
@@ -15,25 +24,47 @@ function getGoogleAuth(scopes) {
   if (envJsonStr) {
     try {
       let jsonContent = envJsonStr.trim();
-      // Strip outer quotes if pasted with enclosing single or double quotes
-      if ((jsonContent.startsWith("'") && jsonContent.endsWith("'")) ||
-          (jsonContent.startsWith('"') && jsonContent.endsWith('"'))) {
-        jsonContent = jsonContent.slice(1, -1).trim();
-      }
+      // Strip leading and trailing quotes (single or double)
+      jsonContent = jsonContent.replace(/^['"]+|['"]+$/g, '').trim();
+
       // Handle base64 encoded JSON if applicable
       if (!jsonContent.startsWith('{')) {
-        jsonContent = Buffer.from(jsonContent, 'base64').toString('utf8');
+        try {
+          const decoded = Buffer.from(jsonContent, 'base64').toString('utf8').trim();
+          if (decoded.startsWith('{')) {
+            jsonContent = decoded;
+          }
+        } catch (b64Err) {
+          // Keep original string if base64 decoding fails
+        }
       }
-      const credentials = JSON.parse(jsonContent);
-      if (credentials.private_key && typeof credentials.private_key === 'string') {
-        credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+
+      let credentials;
+      try {
+        credentials = JSON.parse(jsonContent);
+      } catch (parseErr1) {
+        // Attempt fallback for unescaped newlines in JSON strings
+        try {
+          const sanitized = jsonContent.replace(/\r/g, '').replace(/\n/g, '\\n');
+          credentials = JSON.parse(sanitized);
+        } catch (parseErr2) {
+          console.error('[DriveService] Error parsing Google credentials from env JSON:', parseErr1.message);
+          lastAuthError = `JSON parse error: ${parseErr1.message}`;
+        }
       }
-      return new google.auth.GoogleAuth({
-        credentials,
-        scopes
-      });
+
+      if (credentials) {
+        if (credentials.private_key && typeof credentials.private_key === 'string') {
+          credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+        }
+        return new google.auth.GoogleAuth({
+          credentials,
+          scopes
+        });
+      }
     } catch (e) {
       console.error('[DriveService] Error parsing Google credentials from env JSON:', e.message);
+      lastAuthError = e.message;
     }
   }
 
@@ -52,6 +83,7 @@ function getGoogleAuth(scopes) {
       });
     } catch (e) {
       console.error('[DriveService] Error setting up Google auth from individual env vars:', e.message);
+      lastAuthError = `Individual env vars error: ${e.message}`;
     }
   }
 
@@ -249,7 +281,8 @@ export async function fetchSpreadsheetData(spreadsheetUrl) {
 
   const sheets = getSheetsClient();
   if (!sheets) {
-    throw new Error('Service Account credentials not configured for Google Sheets. Please set GOOGLE_CREDENTIALS_JSON or GOOGLE_CLIENT_EMAIL & GOOGLE_PRIVATE_KEY environment variables in Vercel/Render, or add server/config/google_credentials.json.');
+    const detail = getLastAuthError() ? ` (${getLastAuthError()})` : '';
+    throw new Error(`Service Account credentials not configured for Google Sheets${detail}. Please check GOOGLE_CREDENTIALS_JSON in Vercel/Render settings.`);
   }
 
   try {
