@@ -60,10 +60,10 @@ export async function extractICData(imageBuffer, mimeType = 'image/jpeg', mockSa
     };
   }
 
-  const apiKey = process.env.OMNIROUTE_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return {
-      error: 'GEMINI_API_KEY or OMNIROUTE_API_KEY is not configured in server .env',
+      error: 'GEMINI_API_KEY is not configured in server .env',
       extracted_name: null,
       annual_income: null,
       issue_date: null,
@@ -74,60 +74,7 @@ export async function extractICData(imageBuffer, mimeType = 'image/jpeg', mockSa
     };
   }
 
-  const baseUrl = process.env.OMNIROUTE_BASE_URL;
-
   try {
-    // If OmniRoute key (sk-...) or explicit OMNIROUTE_BASE_URL is set, use OpenAI-compatible endpoint format
-    if (apiKey.startsWith('sk-') || baseUrl) {
-      const endpoint = baseUrl 
-        ? `${baseUrl.replace(/\/$/, '')}/chat/completions` 
-        : 'http://localhost:20128/v1/chat/completions';
-
-      console.log(`[GeminiService] Routing OCR request via OmniRoute endpoint (${endpoint})`);
-
-      const base64Data = imageBuffer.toString('base64');
-      const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${base64Data}`;
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: process.env.OMNIROUTE_MODEL || 'gemini/gemini-3-flash-preview',
-          stream: false,
-          messages: [
-            {
-              role: 'system',
-              content: SYSTEM_PROMPT
-            },
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: 'Extract structured JSON fields from this Income Certificate image as specified in system prompt.' },
-                { type: 'image_url', image_url: { url: dataUrl } }
-              ]
-            }
-          ],
-          temperature: 0.1
-        })
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`OmniRoute gateway response (${response.status}): ${errText}`);
-      }
-
-      const json = await response.json();
-      const rawContent = json.choices?.[0]?.message?.content || '';
-      const cleanedText = rawContent.replace(/```json\n?|\n?```/g, '').trim();
-      const parsedData = JSON.parse(cleanedText);
-
-      return validateAndSanitizeExtraction(parsedData);
-    }
-
-    // Direct Google Gemini API Key with automatic model fallback
     const genAI = new GoogleGenerativeAI(apiKey);
     const candidateModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-1.5-pro'];
 
